@@ -1,0 +1,51 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Rol {
+  id_rol: Int!
+  nombre: String!
+  descripcion: String
+}
+
+type Usuario {
+  id_usuario: Int!
+  nombre: String!
+  correo: String!
+  role_id: Int!
+  rol: Rol!
+  fecha_registro: DateTime!
+  activo: Boolean!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type LoginResponse {
+  access_token: String!
+  usuario: Usuario!
+}
+
+type Query {
+  obtenerRoles: [Rol!]!
+  obtenerUsuarios: [Usuario!]!
+}
+
+type Mutation {
+  login(input: LoginInput!): LoginResponse!
+  register(input: RegisterInput!): LoginResponse!
+}
+
+input LoginInput {
+  correo: String!
+  password: String!
+}
+
+input RegisterInput {
+  nombre: String!
+  correo: String!
+  password: String!
+  role_id: Float
+}
