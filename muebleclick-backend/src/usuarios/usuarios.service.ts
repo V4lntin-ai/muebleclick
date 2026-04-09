@@ -27,4 +27,12 @@ export class UsuariosService {
     });
     return this.usuarioRepository.save(nuevoUsuario);
   }
+
+  async obtenerPerfil(id_usuario: number) {
+    const usuario = await this.usuarioRepository.findOneBy({ id_usuario });
+    if (!usuario) {
+      throw new Error('Usuario no encontrado');
+    }
+    return usuario;
+  }
 }

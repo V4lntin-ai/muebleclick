@@ -172,7 +172,6 @@ export default function LoginScreen() {
   );
 }
 
-// ... Mantén tus estilos exactos de styles = StyleSheet.create({...}) de tu archivo original ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1, padding: spacing.lg },

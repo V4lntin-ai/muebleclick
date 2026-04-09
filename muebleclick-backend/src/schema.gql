@@ -28,14 +28,102 @@ type LoginResponse {
   usuario: Usuario!
 }
 
+type Muebleria {
+  id_muebleria: Int!
+  nombre_negocio: String!
+  id_propietario: Int!
+  razon_social: String!
+  rfc: String!
+  direccion_principal: String!
+  telefono: String!
+  creado_en: DateTime!
+}
+
+type Producto {
+  id_producto: Int!
+  sku: String!
+  id_muebleria: Int!
+  muebleria: Muebleria!
+  nombre: String!
+  descripcion: String!
+  categoria: String!
+  unidad_medida: String!
+  precio_venta: Float!
+  imagen_url: String
+  peso_kg: Float
+  volumen_m3: Float
+  tipo_producto: String!
+  activo: Boolean!
+}
+
+type PaginatedProductos {
+  items: [Producto!]!
+  total: Int!
+}
+
+type CategoriaOutput {
+  nombre: String!
+}
+
+type DetallePedido {
+  id_detalle: Int!
+  id_pedido: Int!
+  id_producto: Int!
+  producto: Producto!
+  cantidad: Int!
+  precio_unitario: Float!
+}
+
+type Pedido {
+  id_pedido: Int!
+  id_usuario: Int!
+  usuario: Usuario!
+  total: Float!
+  estado: String!
+  tipo_entrega: String!
+  fecha_pedido: DateTime!
+  detalles: [DetallePedido!]
+}
+
+type CrearPedidoResponse {
+  success: Boolean!
+  message: String
+  id: Int
+}
+
+type DireccionEnvio {
+  id_direccion: Int!
+  id_cliente: Int!
+  cliente: Usuario
+  destinatario: String!
+  telefono: String!
+  codigo_postal: String!
+  estado: String!
+  municipio: String!
+  colonia: String!
+  calle: String!
+  num_exterior: String!
+  num_interior: String
+  referencias: String!
+}
+
 type Query {
   obtenerRoles: [Rol!]!
   obtenerUsuarios: [Usuario!]!
+  perfil: Usuario!
+  productos(categoria: String, search: String): PaginatedProductos!
+  categorias: [CategoriaOutput!]!
+  producto(id: Int!): Producto
+  misPedidos: [Pedido!]!
+  pedido(id: Int!): Pedido!
+  misDirecciones: [DireccionEnvio!]!
 }
 
 type Mutation {
   login(input: LoginInput!): LoginResponse!
   register(input: RegisterInput!): LoginResponse!
+  crearPedido(input: CrearPedidoInput!): CrearPedidoResponse!
+  crearDireccion(input: CrearDireccionInput!): DireccionEnvio!
 }
 
 input LoginInput {
@@ -48,4 +136,27 @@ input RegisterInput {
   correo: String!
   password: String!
   role_id: Float
+}
+
+input CrearPedidoInput {
+  items: [PedidoItemInput!]!
+  tipoEntrega: String!
+}
+
+input PedidoItemInput {
+  idProducto: Int!
+  cantidad: Int!
+}
+
+input CrearDireccionInput {
+  destinatario: String!
+  telefono: String!
+  codigo_postal: String!
+  estado: String!
+  municipio: String!
+  colonia: String!
+  calle: String!
+  num_exterior: String!
+  num_interior: String
+  referencias: String!
 }

@@ -1,33 +1,36 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation } from '@tanstack/react-query';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { useCartStore, useAuthStore } from '../../src/stores';
 import { CartItem, Button } from '../../src/components';
-import { api } from '../../src/services/api';
+
+const CREAR_PEDIDO_MUTATION = gql`
+  mutation CrearPedido($input: CrearPedidoInput!) {
+    crearPedido(input: $input) {
+      success
+      message
+      id
+    }
+  }
+`;
 
 export default function CarritoScreen() {
   const router = useRouter();
   const { items, getTotal, clearCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
 
-  const crearPedidoMutation = useMutation({
-    mutationFn: (data: { items: { idProducto: number; cantidad: number }[]; tipoEntrega: string }) =>
-      api.crearPedido(data.items, data.tipoEntrega),
-    onSuccess: (data) => {
+  const [crearPedidoBackend, { loading: isCreatingPedido }] = useMutation(CREAR_PEDIDO_MUTATION, {
+    onCompleted: (data: any) => {
       if (data?.crearPedido?.success) {
-        clearCart();
+        // Vaciamos el carrito de Zustand porque ya se compró
+        clearCart(); 
         Alert.alert(
-          '\u00a1Pedido Creado!',
-          'Tu pedido ha sido procesado exitosamente',
+          '¡Pedido Creado!',
+          data.crearPedido.message || 'Tu pedido ha sido procesado exitosamente',
           [
             {
               text: 'Ver Pedido',
@@ -40,7 +43,7 @@ export default function CarritoScreen() {
       }
     },
     onError: (error: any) => {
-      Alert.alert('Error', error.message || 'Error al procesar el pedido');
+      Alert.alert('Error de Seguridad', error.message || 'Inicia sesión nuevamente para comprar');
     },
   });
 
@@ -54,22 +57,26 @@ export default function CarritoScreen() {
   const handleCheckout = async () => {
     if (!isAuthenticated) {
       Alert.alert(
-        'Iniciar Sesi\u00f3n',
-        'Necesitas iniciar sesi\u00f3n para realizar un pedido',
+        'Iniciar Sesión',
+        'Necesitas iniciar sesión para realizar un pedido',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Iniciar Sesi\u00f3n', onPress: () => router.push('/(auth)/login') },
+          { text: 'Iniciar Sesión', onPress: () => router.push('/(auth)/login') },
         ]
       );
       return;
     }
 
-    crearPedidoMutation.mutate({
-      items: items.map((item) => ({
-        idProducto: item.producto.idProducto,
-        cantidad: item.cantidad,
-      })),
-      tipoEntrega: 'domicilio',
+    crearPedidoBackend({
+      variables: {
+        input: {
+          items: items.map((item) => ({
+            idProducto: item.producto.idProducto,
+            cantidad: item.cantidad,
+          })),
+          tipoEntrega: 'domicilio',
+        }
+      }
     });
   };
 
@@ -81,12 +88,12 @@ export default function CarritoScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="cart-outline" size={80} color={colors.text.tertiary} />
-        <Text style={styles.emptyTitle}>Tu carrito est\u00e1 vac\u00edo</Text>
+        <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
         <Text style={styles.emptyText}>
-          Explora nuestro cat\u00e1logo y encuentra los muebles perfectos para ti
+          Explora nuestro catálogo y encuentra los muebles perfectos para ti
         </Text>
         <Button
-          title="Explorar Cat\u00e1logo"
+          title="Explorar Catálogo"
           onPress={() => router.push('/(tabs)/catalogo')}
           variant="primary"
           style={styles.exploreButton}
@@ -117,9 +124,9 @@ export default function CarritoScreen() {
           <View style={styles.promoCard}>
             <Ionicons name="gift-outline" size={24} color={colors.primary[600]} />
             <View style={styles.promoText}>
-              <Text style={styles.promoTitle}>\u00a1Env\u00edo gratis!</Text>
+              <Text style={styles.promoTitle}>¡Envío gratis!</Text>
               <Text style={styles.promoDesc}>
-                Agrega {formatPrice(5000 - subtotal)} m\u00e1s para env\u00edo gratis
+                Agrega {formatPrice(5000 - subtotal)} más para envío gratis
               </Text>
             </View>
           </View>
@@ -133,7 +140,7 @@ export default function CarritoScreen() {
           <Text style={styles.summaryValue}>{formatPrice(subtotal)}</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Env\u00edo</Text>
+          <Text style={styles.summaryLabel}>Envío</Text>
           <Text style={[styles.summaryValue, envio === 0 && styles.freeShipping]}>
             {envio === 0 ? 'Gratis' : formatPrice(envio)}
           </Text>
@@ -144,12 +151,12 @@ export default function CarritoScreen() {
           <Text style={styles.totalValue}>{formatPrice(total)}</Text>
         </View>
         <Button
-          title={isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesi\u00f3n para Comprar'}
+          title={isAuthenticated ? 'Proceder al Pago' : 'Iniciar Sesión para Comprar'}
           onPress={handleCheckout}
           variant="primary"
           size="large"
           fullWidth
-          loading={crearPedidoMutation.isPending}
+          loading={isCreatingPedido}
           icon={<Ionicons name={isAuthenticated ? "card-outline" : "log-in-outline"} size={20} color={colors.white} />}
         />
       </View>
@@ -158,105 +165,25 @@ export default function CarritoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.md,
-  },
-  itemsContainer: {
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-  promoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary[50],
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-  },
-  promoText: {
-    flex: 1,
-  },
-  promoTitle: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.primary[700],
-  },
-  promoDesc: {
-    ...typography.caption,
-    color: colors.primary[600],
-  },
-  summaryContainer: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    ...shadows.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  summaryLabel: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  summaryValue: {
-    ...typography.body,
-    fontWeight: '500',
-    color: colors.text.primary,
-  },
-  freeShipping: {
-    color: colors.success,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.md,
-  },
-  totalLabel: {
-    ...typography.h3,
-    color: colors.text.primary,
-  },
-  totalValue: {
-    ...typography.h2,
-    color: colors.primary[700],
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    ...typography.h2,
-    color: colors.text.primary,
-    marginTop: spacing.lg,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  exploreButton: {
-    marginTop: spacing.md,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: spacing.md },
+  itemsContainer: { marginBottom: spacing.md },
+  sectionTitle: { ...typography.body, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.md },
+  promoCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary[50], padding: spacing.md, borderRadius: borderRadius.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.primary[200] },
+  promoText: { flex: 1 },
+  promoTitle: { ...typography.body, fontWeight: '600', color: colors.primary[700] },
+  promoDesc: { ...typography.caption, color: colors.primary[600] },
+  summaryContainer: { backgroundColor: colors.white, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, ...shadows.lg },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  summaryLabel: { ...typography.body, color: colors.text.secondary },
+  summaryValue: { ...typography.body, fontWeight: '500', color: colors.text.primary },
+  freeShipping: { color: colors.success, fontWeight: '600' },
+  divider: { height: 1, backgroundColor: colors.divider, marginVertical: spacing.md },
+  totalLabel: { ...typography.h3, color: colors.text.primary },
+  totalValue: { ...typography.h2, color: colors.primary[700] },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  emptyTitle: { ...typography.h2, color: colors.text.primary, marginTop: spacing.lg },
+  emptyText: { ...typography.body, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
+  exploreButton: { marginTop: spacing.md },
 });

@@ -1,68 +1,80 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme';
-import { api } from '../../src/services/api';
 import { ProductCard, Input } from '../../src/components';
 import { useUIStore } from '../../src/stores';
-import { Producto } from '../../src/types';
+
+const GET_PRODUCTOS = gql`
+  query GetProductos($categoria: String, $search: String) {
+    productos(categoria: $categoria, search: $search) {
+      items {
+        idProducto: id_producto
+        nombre
+        descripcion
+        categoria
+        precioVenta: precio_venta
+        imagenUrl: imagen_url
+      }
+      total
+    }
+  }
+`;
+
+const GET_CATEGORIAS = gql`
+  query GetCategorias {
+    categorias {
+      nombre
+    }
+  }
+`;
 
 export default function CatalogoScreen() {
   const router = useRouter();
   const { selectedCategoria, setSelectedCategoria, searchQuery, setSearchQuery } = useUIStore();
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['productos', page, pageSize, selectedCategoria, searchQuery],
-    queryFn: () => api.getProductos(page, pageSize, {
-      categoria: selectedCategoria || undefined,
-      search: searchQuery || undefined,
-    }),
+  
+  const { data, loading: isLoading, error, refetch } = useQuery(GET_PRODUCTOS, {
+    variables: { 
+      categoria: selectedCategoria || null, 
+      search: searchQuery || null 
+    },
+    fetchPolicy: 'cache-and-network'
   });
+  if (error) {
+    console.error("Error de Apollo:", error.message);
+  } else {
+    console.log("Datos de Apollo:", data);
+  }
 
-  const { data: categoriasData } = useQuery({
-    queryKey: ['categorias'],
-    queryFn: () => api.getCategorias(),
-  });
+  const { data: categoriasData } = useQuery(GET_CATEGORIAS);
 
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setPage(1);
     await refetch();
     setRefreshing(false);
   };
 
   const handleCategoriaFilter = (cat: string | null) => {
     setSelectedCategoria(cat);
-    setPage(1);
   };
 
   const handleSearch = useCallback((text: string) => {
     setSearchQuery(text);
-    setPage(1);
-  }, []);
+  }, [setSearchQuery]);
 
   const handleProductPress = (id: number) => {
     router.push(`/producto/${id}`);
   };
 
-  const productos = data?.productos?.items || [];
-  const categorias = categoriasData?.categorias || [];
+  const productos = (data as any)?.productos?.items || [];
+  const categorias = (categoriasData as any)?.categorias || [];
 
-  const renderProduct = ({ item }: { item: Producto }) => (
+  const renderProduct = ({ item }: { item: any }) => (
     <ProductCard
       producto={item}
       onPress={() => handleProductPress(item.idProducto)}
@@ -89,12 +101,7 @@ export default function CatalogoScreen() {
           ]}
           onPress={() => handleCategoriaFilter(null)}
         >
-          <Text
-            style={[
-              styles.categoryChipText,
-              !selectedCategoria && styles.categoryChipTextActive,
-            ]}
-          >
+          <Text style={[styles.categoryChipText, !selectedCategoria && styles.categoryChipTextActive]}>
             Todos
           </Text>
         </TouchableOpacity>
@@ -107,12 +114,7 @@ export default function CatalogoScreen() {
             ]}
             onPress={() => handleCategoriaFilter(cat.nombre)}
           >
-            <Text
-              style={[
-                styles.categoryChipText,
-                selectedCategoria === cat.nombre && styles.categoryChipTextActive,
-              ]}
-            >
+            <Text style={[styles.categoryChipText, selectedCategoria === cat.nombre && styles.categoryChipTextActive]}>
               {cat.nombre}
             </Text>
           </TouchableOpacity>
@@ -121,7 +123,7 @@ export default function CatalogoScreen() {
 
       {/* Results count */}
       <Text style={styles.resultsCount}>
-        {data?.productos?.total || 0} productos encontrados
+        {(data as any)?.productos?.total || 0} productos encontrados
       </Text>
     </View>
   );
@@ -143,8 +145,8 @@ export default function CatalogoScreen() {
         <Text style={styles.emptyTitle}>No hay productos</Text>
         <Text style={styles.emptyText}>
           {searchQuery
-            ? 'No encontramos productos con tu b\u00fasqueda'
-            : 'No hay productos en esta categor\u00eda'}
+            ? 'No encontramos productos con tu búsqueda'
+            : 'No hay productos en esta categoría'}
         </Text>
       </View>
     );
@@ -163,11 +165,7 @@ export default function CatalogoScreen() {
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary[500]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary[500]} />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -176,74 +174,19 @@ export default function CatalogoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  searchContainer: {
-    marginBottom: spacing.sm,
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  categoryChip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[500],
-  },
-  categoryChipText: {
-    ...typography.bodySmall,
-    color: colors.text.secondary,
-  },
-  categoryChipTextActive: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  resultsCount: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    marginBottom: spacing.md,
-  },
-  listContent: {
-    paddingBottom: spacing.xl,
-  },
-  row: {
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-  },
-  loadingFooter: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  emptyTitle: {
-    ...typography.h3,
-    color: colors.text.primary,
-    marginTop: spacing.md,
-  },
-  emptyText: {
-    ...typography.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  searchContainer: { marginBottom: spacing.sm },
+  categoriesContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  categoryChip: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: borderRadius.full, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+  categoryChipActive: { backgroundColor: colors.primary[500], borderColor: colors.primary[500] },
+  categoryChipText: { ...typography.bodySmall, color: colors.text.secondary },
+  categoryChipTextActive: { color: colors.white, fontWeight: '600' },
+  resultsCount: { ...typography.caption, color: colors.text.tertiary, marginBottom: spacing.md },
+  listContent: { paddingBottom: spacing.xl },
+  row: { justifyContent: 'space-between', paddingHorizontal: spacing.md },
+  loadingFooter: { paddingVertical: spacing.lg, alignItems: 'center' },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl },
+  emptyTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.md },
+  emptyText: { ...typography.body, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.sm },
 });

@@ -1,396 +1,162 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-import { api } from '../../src/services/api';
 import { Button } from '../../src/components';
 
-const getStatusColor = (status: string) => {
-  const statusColors: Record<string, string> = {
-    pendiente: colors.warning,
-    confirmado: colors.info,
-    en_proceso: colors.info,
-    enviado: colors.primary[500],
-    entregado: colors.success,
-    cancelado: colors.error,
-    completada: colors.success,
-  };
-  return statusColors[status] || colors.text.tertiary;
-};
-
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    pendiente: 'Pendiente',
-    confirmado: 'Confirmado',
-    en_proceso: 'En Proceso',
-    enviado: 'Enviado',
-    entregado: 'Entregado',
-    cancelado: 'Cancelado',
-    completada: 'Completada',
-  };
-  return labels[status] || status;
-};
+const GET_PEDIDO = gql`
+  query GetPedido($id: Int!) {
+    pedido(id: $id) {
+      idPedido: id_pedido
+      total
+      estado
+      tipoEntrega: tipo_entrega
+      fechaPedido: fecha_pedido
+      detalles {
+        idDetalle: id_detalle
+        cantidad
+        precioUnitario: precio_unitario
+        producto {
+          nombre
+          imagenUrl: imagen_url
+          muebleria {
+            nombreNegocio: nombre_negocio
+          }
+        }
+      }
+    }
+  }
+`;
 
 export default function PedidoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['pedido', id],
-    queryFn: () => api.getPedido(parseInt(id || '0')),
-    enabled: !!id,
+  const { data, loading, error } = useQuery(GET_PEDIDO, {
+    variables: { id: parseInt(id || '0') },
+    skip: !id,
+    fetchPolicy: 'cache-and-network',
   });
 
-  const venta = data?.pedido;
-
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(price);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(price);
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const date = new Date(parseInt(dateString) || dateString);
+    return date.toLocaleString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
+  const getStatusColor = (estado: string) => {
+    switch (estado?.toLowerCase()) {
+      case 'entregado': return colors.success;
+      case 'enviado': return colors.info;
+      case 'pagado': return colors.primary[500];
+      default: return colors.warning;
+    }
+  };
 
-  if (error || !venta) {
+  if (loading) return <View style={styles.centerContainer}><ActivityIndicator size="large" color={colors.primary[500]} /></View>;
+
+  if (error || !(data as any)?.pedido) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={styles.centerContainer}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
         <Text style={styles.errorTitle}>Pedido no encontrado</Text>
-        <Button
-          title="Volver a Mis Pedidos"
-          onPress={() => router.back()}
-          variant="primary"
-        />
+        <Button title="Volver a mis pedidos" onPress={() => router.back()} variant="primary" />
       </View>
     );
   }
 
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Order Header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.orderId}>Pedido #{venta.idPedido}</Text>
-            <Text style={styles.orderDate}>{formatDate(venta.fechaVenta)}</Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(venta.pedido?.estadoPedido || venta.estadoVenta) + '20' },
-            ]}
-          >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: getStatusColor(venta.pedido?.estadoPedido || venta.estadoVenta) },
-              ]}
-            />
-            <Text
-              style={[
-                styles.statusText,
-                { color: getStatusColor(venta.pedido?.estadoPedido || venta.estadoVenta) },
-              ]}
-            >
-              {getStatusLabel(venta.pedido?.estadoPedido || venta.estadoVenta)}
-            </Text>
-          </View>
-        </View>
+  const pedido = (data as any).pedido;
+  const subtotal = pedido.detalles.reduce((acc: number, det: any) => acc + (det.cantidad * det.precioUnitario), 0);
+  const envio = pedido.total - subtotal;
 
-        {venta.pedido && (
-          <View style={styles.deliveryInfo}>
-            <Ionicons
-              name={venta.pedido.tipoEntrega === 'domicilio' ? 'car-outline' : 'storefront-outline'}
-              size={18}
-              color={colors.text.secondary}
-            />
-            <Text style={styles.deliveryText}>
-              {venta.pedido.tipoEntrega === 'domicilio'
-                ? 'Env\u00edo a domicilio'
-                : 'Recoger en tienda'}
-            </Text>
-          </View>
-        )}
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header del Ticket */}
+      <View style={styles.ticketHeader}>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(pedido.estado) + '20' }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(pedido.estado) }]}>{pedido.estado.toUpperCase()}</Text>
+        </View>
+        <Text style={styles.orderId}>Pedido #{pedido.idPedido}</Text>
+        <Text style={styles.orderDate}>{formatDate(pedido.fechaPedido)}</Text>
       </View>
 
-      {/* Products */}
+      {/* Lista de Productos */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Productos</Text>
-        {venta.detalles.map((detalle: any) => (
-          <View key={detalle.idDetalleVenta} style={styles.productCard}>
-            <Image
-              source={{ uri: detalle.producto?.imagenUrl || 'https://via.placeholder.com/80' }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName} numberOfLines={2}>
-                {detalle.producto?.nombre}
-              </Text>
-              <Text style={styles.productSku}>SKU: {detalle.producto?.sku}</Text>
-              <View style={styles.productPriceRow}>
-                <Text style={styles.productQuantity}>x{detalle.cantidad}</Text>
-                <Text style={styles.productPrice}>
-                  {formatPrice(detalle.precioUnitario)}
-                </Text>
+        <Text style={styles.sectionTitle}>Artículos ({pedido.detalles.length})</Text>
+        {pedido.detalles.map((detalle: any) => (
+          <View key={detalle.idDetalle} style={styles.itemRow}>
+            {detalle.producto.imagenUrl ? (
+              <Image source={{ uri: detalle.producto.imagenUrl }} style={styles.itemImage} />
+            ) : (
+              <View style={styles.placeholderImage}><Ionicons name="image-outline" size={24} color={colors.text.tertiary} /></View>
+            )}
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName}>{detalle.producto.nombre}</Text>
+              <Text style={styles.itemStore}>Vendido por: {detalle.producto.muebleria?.nombreNegocio}</Text>
+              <View style={styles.itemPriceRow}>
+                <Text style={styles.itemQty}>{detalle.cantidad}x {formatPrice(detalle.precioUnitario)}</Text>
+                <Text style={styles.itemTotal}>{formatPrice(detalle.cantidad * detalle.precioUnitario)}</Text>
               </View>
             </View>
-            <Text style={styles.productSubtotal}>
-              {formatPrice(detalle.subtotal)}
-            </Text>
           </View>
         ))}
       </View>
 
-      {/* Summary */}
+      {/* Resumen Financiero */}
       <View style={styles.summaryCard}>
-        <Text style={styles.sectionTitle}>Resumen</Text>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
-          <Text style={styles.summaryValue}>{formatPrice(venta.subTotal)}</Text>
+          <Text style={styles.summaryValue}>{formatPrice(subtotal)}</Text>
         </View>
-        {venta.descuento > 0 && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Descuento</Text>
-            <Text style={[styles.summaryValue, styles.discountValue]}>
-              -{formatPrice(venta.descuento)}
-            </Text>
-          </View>
-        )}
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Envío a {pedido.tipoEntrega}</Text>
+          <Text style={styles.summaryValue}>{envio > 0 ? formatPrice(envio) : 'Gratis'}</Text>
+        </View>
         <View style={styles.divider} />
         <View style={styles.summaryRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{formatPrice(venta.totalVenta)}</Text>
+          <Text style={styles.totalLabel}>Total Pagado</Text>
+          <Text style={styles.totalValue}>{formatPrice(pedido.total)}</Text>
         </View>
       </View>
 
-      {/* Notes */}
-      {venta.pedido?.notas && (
-        <View style={styles.notesCard}>
-          <Text style={styles.sectionTitle}>Notas</Text>
-          <Text style={styles.notesText}>{venta.pedido.notas}</Text>
-        </View>
-      )}
-
-      {/* Actions */}
-      <View style={styles.actionsContainer}>
-        <Button
-          title="Volver a Mis Pedidos"
-          onPress={() => router.push('/(tabs)/pedidos')}
-          variant="outline"
-          fullWidth
-        />
-      </View>
+      <Button title="Regresar" onPress={() => router.back()} variant="outline" style={styles.backButton} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  errorTitle: {
-    ...typography.h3,
-    color: colors.text.primary,
-  },
-  headerCard: {
-    backgroundColor: colors.white,
-    margin: spacing.md,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    ...shadows.sm,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  orderId: {
-    ...typography.h3,
-    color: colors.text.primary,
-  },
-  orderDate: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    marginTop: spacing.xs,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.full,
-    gap: spacing.xs,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-  deliveryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  deliveryText: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  section: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-  productCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.sm,
-    ...shadows.sm,
-  },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-  },
-  productInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  productName: {
-    ...typography.bodySmall,
-    fontWeight: '500',
-    color: colors.text.primary,
-  },
-  productSku: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-  productPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  productQuantity: {
-    ...typography.caption,
-    color: colors.text.secondary,
-  },
-  productPrice: {
-    ...typography.caption,
-    color: colors.text.secondary,
-  },
-  productSubtotal: {
-    ...typography.body,
-    fontWeight: '600',
-    color: colors.text.primary,
-    alignSelf: 'center',
-  },
-  summaryCard: {
-    backgroundColor: colors.white,
-    margin: spacing.md,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    ...shadows.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  summaryLabel: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  summaryValue: {
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  discountValue: {
-    color: colors.success,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.md,
-  },
-  totalLabel: {
-    ...typography.h3,
-    color: colors.text.primary,
-  },
-  totalValue: {
-    ...typography.h2,
-    color: colors.primary[700],
-  },
-  notesCard: {
-    backgroundColor: colors.secondary[50],
-    margin: spacing.md,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.secondary[200],
-  },
-  notesText: {
-    ...typography.body,
-    color: colors.text.secondary,
-    fontStyle: 'italic',
-  },
-  actionsContainer: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  content: { padding: spacing.md },
+  errorTitle: { ...typography.h3, color: colors.text.primary, marginTop: spacing.md, marginBottom: spacing.lg },
+  ticketHeader: { alignItems: 'center', backgroundColor: colors.white, padding: spacing.xl, borderRadius: borderRadius.lg, marginBottom: spacing.md, ...shadows.sm },
+  statusBadge: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: borderRadius.full, marginBottom: spacing.sm },
+  statusText: { ...typography.bodySmall, fontWeight: '700' },
+  orderId: { ...typography.h2, color: colors.text.primary, marginBottom: spacing.xs },
+  orderDate: { ...typography.body, color: colors.text.secondary },
+  section: { backgroundColor: colors.white, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
+  sectionTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.md },
+  itemRow: { flexDirection: 'row', marginBottom: spacing.md, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  itemImage: { width: 60, height: 60, borderRadius: borderRadius.md, marginRight: spacing.md },
+  placeholderImage: { width: 60, height: 60, borderRadius: borderRadius.md, backgroundColor: colors.primary[50], justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  itemInfo: { flex: 1 },
+  itemName: { ...typography.body, fontWeight: '600', color: colors.text.primary },
+  itemStore: { ...typography.caption, color: colors.text.tertiary, marginBottom: spacing.xs },
+  itemPriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
+  itemQty: { ...typography.bodySmall, color: colors.text.secondary },
+  itemTotal: { ...typography.body, fontWeight: '600', color: colors.primary[700] },
+  summaryCard: { backgroundColor: colors.white, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xl, ...shadows.sm },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
+  summaryLabel: { ...typography.body, color: colors.text.secondary },
+  summaryValue: { ...typography.body, fontWeight: '500', color: colors.text.primary },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  totalLabel: { ...typography.h3, color: colors.text.primary },
+  totalValue: { ...typography.h2, color: colors.primary[700] },
+  backButton: { marginBottom: spacing.xl },
 });

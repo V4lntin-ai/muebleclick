@@ -76,7 +76,7 @@ export default function WelcomeScreen() {
       {/* Action Buttons */}
       <View style={styles.buttonsContainer}>
         <Button
-          title="Explorar Cat\u00e1logo"
+          title="Explorar Catalogo"
           onPress={() => router.push('/(tabs)')}
           variant="primary"
           size="large"
@@ -85,7 +85,7 @@ export default function WelcomeScreen() {
         />
         <View style={styles.authButtons}>
           <Button
-            title="Iniciar Sesi\u00f3n"
+            title="Iniciar Sesion"
             onPress={() => router.push('/(auth)/login')}
             variant="outline"
             size="medium"
