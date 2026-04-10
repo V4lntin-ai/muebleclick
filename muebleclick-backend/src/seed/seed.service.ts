@@ -6,6 +6,7 @@ import { Rol } from '../roles/roles.entity';
 import { Usuario } from '../usuarios/usuarios.entity';
 import { Muebleria } from '../mueblerias/mueblerias.entity';
 import { Producto } from '../productos/productos.entity';
+import { Inventario } from '../inventarios/inventarios.entity';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -16,15 +17,15 @@ export class SeedService implements OnModuleInit {
     @InjectRepository(Usuario) private usuarioRepo: Repository<Usuario>,
     @InjectRepository(Muebleria) private muebleriaRepo: Repository<Muebleria>,
     @InjectRepository(Producto) private productoRepo: Repository<Producto>,
+    // 🚨 2. Inyectamos el repositorio de Inventario
+    @InjectRepository(Inventario) private inventarioRepo: Repository<Inventario>,
   ) {}
 
-  // Este método se ejecuta automáticamente al iniciar NestJS
   async onModuleInit() {
     await this.ejecutarSeed();
   }
 
   async ejecutarSeed() {
-    // Si ya hay productos, detenemos el script para no duplicar datos
     const cantidadProductos = await this.productoRepo.count();
     if (cantidadProductos > 0) {
       this.logger.log('La base de datos ya tiene datos. Seed omitido.');
@@ -33,10 +34,8 @@ export class SeedService implements OnModuleInit {
 
     this.logger.log('Iniciando el sembrado (Seed) de la base de datos...');
 
-    // 1. Crear Rol de Propietario
     const rolPropietario = await this.rolRepo.save({ nombre: 'propietario', descripcion: 'Dueño de Mueblería' });
 
-    // 2. Crear un Usuario Propietario de Prueba
     const hashedPassword = await bcrypt.hash('Demo123!', 10);
     const propietario = await this.usuarioRepo.save({
       nombre: 'Carlos Muebles Demo',
@@ -46,7 +45,6 @@ export class SeedService implements OnModuleInit {
       activo: true,
     });
 
-    // 3. Crear su Mueblería
     const muebleria = await this.muebleriaRepo.save({
       nombre_negocio: 'Muebles Modernos MX',
       id_propietario: propietario.id_usuario,
@@ -56,8 +54,7 @@ export class SeedService implements OnModuleInit {
       telefono: '55-1234-5678',
     });
 
-    // 4. Insertar los Productos de tu prototipo original
-    await this.productoRepo.save([
+    const productosCreados = await this.productoRepo.save([
       {
         sku: 'SOF-MOD-001',
         id_muebleria: muebleria.id_muebleria,
@@ -93,6 +90,14 @@ export class SeedService implements OnModuleInit {
       }
     ]);
 
-    this.logger.log('✅ Seed completado con éxito. Mueblería y productos creados.');
+    const inventarios = productosCreados.map((producto, index) => ({
+      id_producto: producto.id_producto,
+      cantidad_disponible: 10 + (index * 5), 
+      ubicacion: 'Almacén Central'
+    }));
+
+    await this.inventarioRepo.save(inventarios);
+
+    this.logger.log('✅ Seed completado con éxito. Mueblería, productos e INVENTARIO creados.');
   }
 }

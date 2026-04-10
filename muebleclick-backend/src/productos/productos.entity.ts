@@ -1,6 +1,7 @@
 import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { Muebleria } from '../mueblerias/mueblerias.entity';
+import { Inventario } from '../inventarios/inventarios.entity';
 
 @ObjectType()
 @Entity('Productos')
@@ -61,4 +62,9 @@ export class Producto {
   @Field()
   @Column({ type: 'boolean', default: true })
   activo!: boolean;
+
+  @Field(() => Inventario, { nullable: true })
+  @OneToOne(() => Inventario, (inventario) => inventario.producto)
+  inventario!: Inventario;
+
 }

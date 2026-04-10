@@ -16,9 +16,11 @@ interface Producto {
   nombre: string;
   descripcion: string;
   precioVenta: number;
-  stock: number;
   imagenUrl: string;
   categoria: string;
+  inventario?: {
+    cantidad_disponible: number;
+  };
 }
 
 interface GetProductoData {
@@ -32,9 +34,11 @@ const GET_PRODUCTO_BY_ID = gql`
       nombre
       descripcion
       precioVenta: precio_venta
-      stock
       imagenUrl: imagen_url
       categoria
+      inventario {
+        cantidad_disponible
+      }
     }
   }
 `;
@@ -46,12 +50,15 @@ export default function ProductoDetalleScreen() {
 
   const [cantidad, setCantidad] = useState(1);
 
-  const { data, loading } = useQuery<GetProductoData>(GET_PRODUCTO_BY_ID, {
+  const { data, loading, error } = useQuery<GetProductoData>(GET_PRODUCTO_BY_ID, {
     variables: { id: parseInt(id as string) },
     skip: !id,
+    fetchPolicy: 'network-only' 
   });
 
   const producto = data?.producto;
+
+  const stockDisponible = producto?.inventario?.cantidad_disponible || 0;
 
   const formatPrice = (price: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(price);
 
@@ -93,6 +100,13 @@ export default function ProductoDetalleScreen() {
         <Stack.Screen options={{ title: 'No encontrado' }} />
         <Ionicons name="alert-circle-outline" size={64} color={colors.text.tertiary} />
         <Text style={styles.errorText}>No pudimos encontrar este mueble.</Text>
+        
+        {error && (
+          <Text style={{ color: 'red', textAlign: 'center', padding: 20, marginBottom: 20, fontWeight: 'bold' }}>
+            Error detectado: {error.message}
+          </Text>
+        )}
+
         <Button title="Volver al catálogo" onPress={() => router.back()} variant="outline" />
       </View>
     );
@@ -141,9 +155,8 @@ export default function ProductoDetalleScreen() {
 
           <View style={styles.divider} />
           <Text style={styles.sectionTitle}>Acerca de este mueble</Text>
-          <Text style={styles.description}>
-            {producto.descripcion || 'Este es un mueble de alta calidad, diseñado para brindar confort y estilo a tu hogar. Fabricado con los mejores materiales del mercado para garantizar durabilidad.'}
-          </Text>
+          {/* 🚨 Aquí ya usamos la descripción REAL de tu base de datos */}
+          <Text style={styles.description}>{producto.descripcion}</Text>
 
           <View style={styles.divider} />
           <View style={styles.quantityContainer}>
@@ -153,11 +166,11 @@ export default function ProductoDetalleScreen() {
                 <Ionicons name="remove" size={20} color={colors.text.primary} />
               </TouchableOpacity>
               <Text style={styles.qtyText}>{cantidad}</Text>
-              <TouchableOpacity style={styles.qtyButton} onPress={() => setCantidad(Math.min(producto.stock, cantidad + 1))}>
+              <TouchableOpacity style={styles.qtyButton} onPress={() => setCantidad(Math.min(stockDisponible, cantidad + 1))}>
                 <Ionicons name="add" size={20} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.stockText}>({producto.stock} disponibles)</Text>
+            <Text style={styles.stockText}>({stockDisponible} disponibles)</Text>
           </View>
 
         </View>

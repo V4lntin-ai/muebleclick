@@ -18,6 +18,8 @@ import { Pedido } from './pedidos/pedidos.entity';
 import { DetallePedido } from './pedidos/detalle-pedido.entity';
 import { DireccionesModule } from './direcciones/direcciones.module';
 import { DireccionEnvio } from './direcciones/direcciones.entity';
+import { InventariosModule } from './inventarios/inventarios.module'; 
+import { Inventario } from './inventarios/inventarios.entity';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { DireccionEnvio } from './direcciones/direcciones.entity';
       username: 'postgres',
       password: 'qawsedrftg',
       database: 'muebleclick_db', 
-      entities: [Rol, Usuario, Muebleria, Producto, Pedido, DetallePedido, DireccionEnvio], 
+      entities: [Rol, Usuario, Muebleria, Producto, Pedido, DetallePedido, DireccionEnvio, Inventario], 
       synchronize: true,
     }),
     RolesModule,
@@ -43,6 +45,7 @@ import { DireccionEnvio } from './direcciones/direcciones.entity';
     SeedModule,
     PedidosModule,
     DireccionesModule,
+    InventariosModule,
   ],
 })
 export class AppModule {}

@@ -88,7 +88,6 @@ export default function CarritoScreen() {
     setModalVisible(true);
   };
 
-  // Lógica al elegir una dirección final
   const confirmarCompra = (idDireccionElegida: number) => {
     crearPedidoBackend({
       variables: {
@@ -115,7 +114,10 @@ export default function CarritoScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.itemsContainer}>
-          {items.map((item) => <CartItem key={item.producto.idProducto} item={item} />)}
+          {/* 🚨 AQUÍ ESTÁ LA CORRECCIÓN: Agregamos index para evitar llaves duplicadas */}
+          {items.map((item, index) => (
+            <CartItem key={`${item.producto?.idProducto}-${index}`} item={item} />
+          ))}
         </View>
       </ScrollView>
 

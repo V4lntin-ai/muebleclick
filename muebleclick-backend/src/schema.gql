@@ -39,6 +39,13 @@ type Muebleria {
   creado_en: DateTime!
 }
 
+type Inventario {
+  id_inventario: Int!
+  id_producto: Int!
+  cantidad_disponible: Int!
+  ubicacion: String!
+}
+
 type Producto {
   id_producto: Int!
   sku: String!
@@ -54,6 +61,7 @@ type Producto {
   volumen_m3: Float
   tipo_producto: String!
   activo: Boolean!
+  inventario: Inventario
 }
 
 type PaginatedProductos {

@@ -36,7 +36,7 @@ export class ProductosService {
   async findOne(id: number) {
     return this.productoRepo.findOne({
       where: { id_producto: id },
-      relations: ['muebleria'],
+      relations: ['muebleria', 'inventario'],
     });
   }
 
