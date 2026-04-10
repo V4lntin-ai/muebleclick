@@ -19,6 +19,10 @@ export class Pedido {
   @JoinColumn({ name: 'id_usuario' })
   usuario!: Usuario;
 
+  @Field(() => Int, { nullable: true })
+  @Column({ nullable: true })
+  id_direccion!: number;
+
   @Field(() => Float)
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   total!: number;

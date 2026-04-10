@@ -39,7 +39,6 @@ export default function DireccionesScreen() {
   const router = useRouter();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
-  // Estados del formulario
   const [form, setForm] = useState({
     destinatario: '', telefono: '', codigo_postal: '', estado: '',
     municipio: '', colonia: '', calle: '', num_exterior: '',

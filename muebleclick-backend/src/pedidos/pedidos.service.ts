@@ -41,6 +41,7 @@ export class PedidosService {
 
     const nuevoPedido = this.pedidoRepo.create({
       id_usuario,
+      id_direccion: input.idDireccion,
       total: totalFinal,
       tipo_entrega: input.tipoEntrega,
       estado: 'pendiente',

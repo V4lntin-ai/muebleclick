@@ -78,6 +78,7 @@ type Pedido {
   id_pedido: Int!
   id_usuario: Int!
   usuario: Usuario!
+  id_direccion: Int
   total: Float!
   estado: String!
   tipo_entrega: String!
@@ -141,6 +142,7 @@ input RegisterInput {
 input CrearPedidoInput {
   items: [PedidoItemInput!]!
   tipoEntrega: String!
+  idDireccion: Int!
 }
 
 input PedidoItemInput {

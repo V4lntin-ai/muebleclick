@@ -16,6 +16,9 @@ export class CrearPedidoInput {
 
   @Field()
   tipoEntrega!: string;
+
+  @Field(() => Int)
+  idDireccion!: number;
 }
 
 @ObjectType()

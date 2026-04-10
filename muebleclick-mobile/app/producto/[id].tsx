@@ -1,197 +1,219 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-import { Button } from '../../src/components';
+import { colors, spacing, typography, shadows } from '../../src/theme';
 import { useCartStore } from '../../src/stores';
+import { Button } from '../../src/components';
 
-// 🚨 Consulta GraphQL para un solo producto (incluye la mueblería anidada)
-const GET_PRODUCTO = gql`
+const { width } = Dimensions.get('window');
+
+interface Producto {
+  idProducto: number;
+  nombre: string;
+  descripcion: string;
+  precioVenta: number;
+  stock: number;
+  imagenUrl: string;
+  categoria: string;
+}
+
+interface GetProductoData {
+  producto: Producto;
+}
+
+const GET_PRODUCTO_BY_ID = gql`
   query GetProducto($id: Int!) {
     producto(id: $id) {
       idProducto: id_producto
-      sku
       nombre
       descripcion
-      categoria
-      unidadMedida: unidad_medida
       precioVenta: precio_venta
+      stock
       imagenUrl: imagen_url
-      pesoKg: peso_kg
-      volumenM3: volumen_m3
-      muebleria {
-        nombreNegocio: nombre_negocio
-        telefono
-      }
+      categoria
     }
   }
 `;
 
-export default function ProductoDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function ProductoDetalleScreen() {
+  const { id } = useLocalSearchParams();
   const router = useRouter();
-  const addItem = useCartStore((state) => state.addItem);
-  const [cantidad, setCantidad] = React.useState(1);
+  const { addItem } = useCartStore();
 
-  // 🚨 Hook de Apollo
-  const { data, loading: isLoading, error } = useQuery(GET_PRODUCTO, {
-    variables: { id: parseInt(id || '0') },
+  const [cantidad, setCantidad] = useState(1);
+
+  const { data, loading } = useQuery<GetProductoData>(GET_PRODUCTO_BY_ID, {
+    variables: { id: parseInt(id as string) },
     skip: !id,
   });
 
-  const producto = (data as any)?.producto;
+  const producto = data?.producto;
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(price);
-  };
+  const formatPrice = (price: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(price);
 
   const handleAddToCart = () => {
-    if (producto) {
-      addItem(producto, cantidad);
-      Alert.alert('Producto Agregado', `${producto.nombre} se ha agregado al carrito`, [
-        { text: 'Seguir Comprando', style: 'cancel' },
-        { text: 'Ver Carrito', onPress: () => router.push('/(tabs)/carrito') },
-      ]);
-    }
+    if (!producto) return;
+    
+    addItem({
+      producto: {
+        idProducto: producto.idProducto,
+        nombre: producto.nombre,
+        precioVenta: producto.precioVenta,
+        imagenUrl: producto.imagenUrl,
+      },
+      cantidad: cantidad
+    });
+
+    Alert.alert(
+      '¡Agregado!', 
+      `${producto.nombre} se agregó a tu carrito.`,
+      [
+        { text: 'Seguir comprando', style: 'cancel' },
+        { text: 'Ver Carrito', onPress: () => router.push('/(tabs)/carrito') }
+      ]
+    );
   };
 
-  if (isLoading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={colors.primary[500]} /></View>;
-
-  if (error || !producto) {
+  if (loading) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
-        <Text style={styles.errorTitle}>Producto no encontrado</Text>
-        <Button title="Volver al Catálogo" onPress={() => router.back()} variant="primary" />
+      <View style={styles.centerContainer}>
+        <Stack.Screen options={{ title: 'Cargando...', headerBackTitle: 'Atrás' }} />
+        <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
   }
 
-  // Por ahora simulamos que siempre hay 10 en stock para pruebas
-  const stockDisponible = 10; 
-  const isOutOfStock = stockDisponible <= 0;
+  if (!producto) {
+    return (
+      <View style={styles.centerContainer}>
+        <Stack.Screen options={{ title: 'No encontrado' }} />
+        <Ionicons name="alert-circle-outline" size={64} color={colors.text.tertiary} />
+        <Text style={styles.errorText}>No pudimos encontrar este mueble.</Text>
+        <Button title="Volver al catálogo" onPress={() => router.back()} variant="outline" />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Image */}
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen 
+        options={{ 
+          title: '',
+          headerTransparent: true,
+          headerLeft: () => (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity style={styles.favButton}>
+              <Ionicons name="heart-outline" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          )
+        }} 
+      />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
         <View style={styles.imageContainer}>
-          {producto.imagenUrl ? (
-            <Image source={{ uri: producto.imagenUrl }} style={styles.image} resizeMode="cover" />
-          ) : (
-            <View style={styles.placeholderImage}><Ionicons name="image-outline" size={80} color={colors.text.tertiary} /></View>
-          )}
+          <Image 
+            source={{ uri: producto.imagenUrl || 'https://via.placeholder.com/400' }} 
+            style={styles.productImage} 
+            resizeMode="cover" 
+          />
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.metaRow}>
-            <View style={styles.categoryBadge}><Text style={styles.categoryText}>{producto.categoria}</Text></View>
-            <Text style={styles.sku}>SKU: {producto.sku}</Text>
+        <View style={styles.infoContainer}>
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagText}>{producto.categoria}</Text>
           </View>
+          
+          <Text style={styles.productName}>{producto.nombre}</Text>
+          <Text style={styles.productPrice}>{formatPrice(producto.precioVenta)}</Text>
+          
+          <Text style={styles.shippingText}>
+            <Ionicons name="car-outline" size={16} color={colors.success} /> Envío gratis a todo el país
+          </Text>
 
-          <Text style={styles.name}>{producto.nombre}</Text>
-          <Text style={styles.price}>{formatPrice(producto.precioVenta)}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Acerca de este mueble</Text>
+          <Text style={styles.description}>
+            {producto.descripcion || 'Este es un mueble de alta calidad, diseñado para brindar confort y estilo a tu hogar. Fabricado con los mejores materiales del mercado para garantizar durabilidad.'}
+          </Text>
 
-          <View style={styles.stockRow}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-            <Text style={[styles.stockText, { color: colors.success }]}>Unidades disponibles</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Descripción</Text>
-            <Text style={styles.description}>{producto.descripcion || 'Sin descripción disponible.'}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Especificaciones</Text>
-            <View style={styles.specsGrid}>
-              {producto.pesoKg && (
-                <View style={styles.specItem}>
-                  <Ionicons name="scale-outline" size={20} color={colors.primary[600]} />
-                  <Text style={styles.specLabel}>Peso</Text>
-                  <Text style={styles.specValue}>{producto.pesoKg} kg</Text>
-                </View>
-              )}
-              {producto.volumenM3 && (
-                <View style={styles.specItem}>
-                  <Ionicons name="cube-outline" size={20} color={colors.primary[600]} />
-                  <Text style={styles.specLabel}>Volumen</Text>
-                  <Text style={styles.specValue}>{producto.volumenM3} m³</Text>
-                </View>
-              )}
+          <View style={styles.divider} />
+          <View style={styles.quantityContainer}>
+            <Text style={styles.quantityLabel}>Cantidad:</Text>
+            <View style={styles.quantityControls}>
+              <TouchableOpacity style={styles.qtyButton} onPress={() => setCantidad(Math.max(1, cantidad - 1))}>
+                <Ionicons name="remove" size={20} color={colors.text.primary} />
+              </TouchableOpacity>
+              <Text style={styles.qtyText}>{cantidad}</Text>
+              <TouchableOpacity style={styles.qtyButton} onPress={() => setCantidad(Math.min(producto.stock, cantidad + 1))}>
+                <Ionicons name="add" size={20} color={colors.text.primary} />
+              </TouchableOpacity>
             </View>
+            <Text style={styles.stockText}>({producto.stock} disponibles)</Text>
           </View>
 
-          {producto.muebleria && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Vendido por</Text>
-              <View style={styles.storeCard}>
-                <View style={styles.storeIcon}><Ionicons name="storefront" size={24} color={colors.primary[600]} /></View>
-                <View style={styles.storeInfo}>
-                  <Text style={styles.storeName}>{producto.muebleria.nombreNegocio}</Text>
-                  {producto.muebleria.telefono && (
-                    <Text style={styles.storeContact}><Ionicons name="call-outline" size={12} color={colors.text.tertiary} /> {producto.muebleria.telefono}</Text>
-                  )}
-                </View>
-              </View>
-            </View>
-          )}
         </View>
       </ScrollView>
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity style={styles.quantityButton} onPress={() => setCantidad(Math.max(1, cantidad - 1))}>
-            <Ionicons name="remove" size={20} color={colors.primary[600]} />
-          </TouchableOpacity>
-          <Text style={styles.quantityText}>{cantidad}</Text>
-          <TouchableOpacity style={styles.quantityButton} onPress={() => setCantidad(Math.min(stockDisponible, cantidad + 1))}>
-            <Ionicons name="add" size={20} color={colors.primary[600]} />
-          </TouchableOpacity>
+      <View style={styles.bottomBar}>
+        <View style={styles.bottomBarPrice}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalPrice}>{formatPrice(producto.precioVenta * cantidad)}</Text>
         </View>
-        <Button title="Agregar al Carrito" onPress={handleAddToCart} variant="primary" size="large" style={styles.addButton} icon={<Ionicons name="cart-outline" size={20} color={colors.white} />} />
+        <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
+          <Text style={styles.addToCartText}>Agregar al Carrito</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
-  errorTitle: { ...typography.h3, color: colors.text.primary },
-  imageContainer: { width: '100%', height: 300, backgroundColor: colors.white, position: 'relative' },
-  image: { width: '100%', height: '100%' },
-  placeholderImage: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.secondary[100] },
-  content: { padding: spacing.lg },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  categoryBadge: { backgroundColor: colors.primary[50], paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm },
-  categoryText: { ...typography.caption, fontWeight: '600', color: colors.primary[700], textTransform: 'uppercase' },
-  sku: { ...typography.caption, color: colors.text.tertiary },
-  name: { ...typography.h2, color: colors.text.primary, marginBottom: spacing.sm },
-  price: { ...typography.h1, color: colors.primary[700], marginBottom: spacing.sm },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.lg },
-  stockText: { ...typography.bodySmall, fontWeight: '500' },
-  section: { marginBottom: spacing.lg },
-  sectionTitle: { ...typography.body, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.sm },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  errorText: { ...typography.body, color: colors.text.secondary, marginTop: spacing.md, marginBottom: spacing.lg },
+  
+  backButton: { backgroundColor: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 20, marginLeft: spacing.md },
+  favButton: { backgroundColor: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 20, marginRight: spacing.md },
+
+  scrollContent: { paddingBottom: 100 }, // Espacio extra para que la barra flotante no tape contenido
+  
+  imageContainer: { width: width, height: width * 1.1, backgroundColor: colors.white },
+  productImage: { width: '100%', height: '100%' },
+
+  infoContainer: { backgroundColor: colors.white, padding: spacing.lg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, ...shadows.md },
+  
+  tagContainer: { alignSelf: 'flex-start', backgroundColor: colors.primary[50], paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: spacing.sm },
+  tagText: { fontSize: 12, fontWeight: '600', color: colors.primary[600], textTransform: 'uppercase' },
+  
+  productName: { ...typography.h1, color: colors.text.primary, marginBottom: spacing.xs },
+  productPrice: { fontSize: 28, fontWeight: 'bold', color: colors.text.primary, marginBottom: spacing.sm },
+  shippingText: { ...typography.bodySmall, color: colors.success, fontWeight: '600' },
+  
+  divider: { height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg },
+  
+  sectionTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.sm },
   description: { ...typography.body, color: colors.text.secondary, lineHeight: 24 },
-  specsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  specItem: { backgroundColor: colors.white, padding: spacing.md, borderRadius: borderRadius.md, alignItems: 'center', minWidth: 100, ...shadows.sm },
-  specLabel: { ...typography.caption, color: colors.text.tertiary, marginTop: spacing.xs },
-  specValue: { ...typography.bodySmall, fontWeight: '600', color: colors.text.primary },
-  storeCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, padding: spacing.md, borderRadius: borderRadius.lg, ...shadows.sm },
-  storeIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary[50], alignItems: 'center', justifyContent: 'center' },
-  storeInfo: { marginLeft: spacing.md },
-  storeName: { ...typography.body, fontWeight: '600', color: colors.text.primary },
-  storeContact: { ...typography.caption, color: colors.text.tertiary, marginTop: spacing.xs },
-  bottomActions: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md, ...shadows.lg },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary[50], borderRadius: borderRadius.md, padding: spacing.xs },
-  quantityButton: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
-  quantityText: { ...typography.body, fontWeight: '600', color: colors.text.primary, minWidth: 36, textAlign: 'center' },
-  addButton: { flex: 1 },
+
+  quantityContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl },
+  quantityLabel: { ...typography.body, color: colors.text.primary, marginRight: spacing.md, fontWeight: '600' },
+  quantityControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+  qtyButton: { padding: spacing.sm },
+  qtyText: { ...typography.body, fontWeight: 'bold', paddingHorizontal: spacing.md },
+  stockText: { ...typography.caption, color: colors.text.tertiary, marginLeft: spacing.md },
+
+  bottomBar: { position: 'absolute', bottom: 0, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 30, borderTopWidth: 1, borderTopColor: colors.border, ...shadows.lg },
+  bottomBarPrice: { flex: 1 },
+  totalLabel: { ...typography.caption, color: colors.text.secondary },
+  totalPrice: { ...typography.h2, color: colors.text.primary },
+  addToCartBtn: { backgroundColor: colors.primary[600], paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12, ...shadows.sm },
+  addToCartText: { color: colors.white, fontWeight: 'bold', fontSize: 16 },
 });

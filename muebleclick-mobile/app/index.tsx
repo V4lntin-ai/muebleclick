@@ -11,7 +11,6 @@ export default function WelcomeScreen() {
   const { isAuthenticated, isLoading, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // Check if user is already authenticated
     const checkAuth = async () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       setLoading(false);
