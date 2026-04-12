@@ -35,10 +35,8 @@ export default function CarritoScreen() {
   const { items, getTotal, clearCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
   
-  // Estado para controlar la ventana de direcciones
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Traemos las direcciones
   const { data: dataDirecciones } = useQuery(GET_MIS_DIRECCIONES_CARRITO, {
     skip: !isAuthenticated,
     fetchPolicy: 'network-only',
@@ -46,7 +44,7 @@ export default function CarritoScreen() {
 
   const [crearPedidoBackend, { loading: isCreatingPedido }] = useMutation(CREAR_PEDIDO_MUTATION, {
     onCompleted: (data: any) => {
-      setModalVisible(false); // Cerramos el modal
+      setModalVisible(false);
       if (data?.crearPedido?.success) {
         clearCart(); 
         Alert.alert('¡Pedido Creado!', 'Prepararemos tu envío lo más pronto posible.', [
@@ -65,26 +63,16 @@ export default function CarritoScreen() {
   const envio = subtotal >= 5000 ? 0 : 299;
   const total = subtotal + envio;
 
-  // Lógica al presionar "Proceder al Pago"
   const handleCheckoutPress = () => {
     if (!isAuthenticated) {
-      Alert.alert('Inicia sesión', 'Necesitas tu cuenta para comprar', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Ir', onPress: () => router.push('/(auth)/login') },
-      ]);
+      Alert.alert('Inicia sesión', 'Necesitas tu cuenta para comprar');
       return;
     }
-
     const direcciones = (dataDirecciones as any)?.misDirecciones || [];
-    
     if (direcciones.length === 0) {
-      Alert.alert('Falta dirección', 'Agrega una dirección de envío para poder entregarte tus muebles.', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Agregar Dirección', onPress: () => router.push('/direcciones') },
-      ]);
+      Alert.alert('Falta dirección', 'Agrega una dirección de envío.');
       return;
     }
-
     setModalVisible(true);
   };
 
@@ -113,10 +101,18 @@ export default function CarritoScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* 🚨 BOTÓN DE EMERGENCIA: TÓCALO EN TU CELULAR PARA BORRAR LA MEMORIA CORRUPTA */}
+        <TouchableOpacity 
+          onPress={() => clearCart()} 
+          style={{ backgroundColor: 'red', padding: 15, borderRadius: 10, marginBottom: 20, alignItems: 'center' }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>🚨 VACIAR MEMORIA DEL CARRITO 🚨</Text>
+        </TouchableOpacity>
+
         <View style={styles.itemsContainer}>
-          {/* 🚨 AQUÍ ESTÁ LA CORRECCIÓN: Agregamos index para evitar llaves duplicadas */}
           {items.map((item, index) => (
-            <CartItem key={`${item.producto?.idProducto}-${index}`} item={item} />
+            <CartItem key={`cart-item-${item.producto?.idProducto || 'fantasma'}-${index}`} item={item} />
           ))}
         </View>
       </ScrollView>
@@ -134,39 +130,6 @@ export default function CarritoScreen() {
           icon={<Ionicons name={isAuthenticated ? "card-outline" : "log-in-outline"} size={20} color={colors.white} />}
         />
       </View>
-
-      {/* Modal Selector de Direcciones */}
-      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Elige una dirección de entrega</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 300 }}>
-              {(dataDirecciones as any)?.misDirecciones.map((dir: any) => (
-                <TouchableOpacity 
-                  key={dir.idDireccion} 
-                  style={styles.addressCard} 
-                  onPress={() => confirmarCompra(dir.idDireccion)}
-                  disabled={isCreatingPedido}
-                >
-                  <Ionicons name="location-outline" size={24} color={colors.primary[600]} style={{ marginRight: spacing.md }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.addressName}>{dir.destinatario}</Text>
-                    <Text style={styles.addressText}>{dir.calle} {dir.numExterior}, Col. {dir.colonia}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
     </View>
   );
 }
@@ -186,12 +149,4 @@ const styles = StyleSheet.create({
   totalValue: { ...typography.h2, color: colors.primary[700] },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   emptyTitle: { ...typography.h2, color: colors.text.primary, marginTop: spacing.lg },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  modalTitle: { ...typography.h3, color: colors.text.primary },
-  addressCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.background, borderRadius: borderRadius.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border },
-  addressName: { ...typography.body, fontWeight: '600', color: colors.text.primary },
-  addressText: { ...typography.caption, color: colors.text.secondary, marginTop: 2 },
 });

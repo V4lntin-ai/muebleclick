@@ -18,7 +18,7 @@ interface Producto {
   categoria: string;
 }
 
-interface ProductosData {
+interface ProductosData { 
   productos: {
     items: Producto[];
   };
@@ -85,7 +85,7 @@ export default function CatalogoScreen() {
               <View style={styles.gridContainer}>
                 {CATEGORIAS_VISUALES.map((cat, index) => (
                   <TouchableOpacity 
-                    key={index} 
+                    key={`cat-${index}`} 
                     style={styles.categoryCard}
                     onPress={() => setCategoriaSeleccionada(cat.nombre)}
                     activeOpacity={0.7}
@@ -117,9 +117,10 @@ export default function CatalogoScreen() {
                 </View>
               ) : productos.length > 0 ? (
                 <View style={styles.productsGrid}>
-                  {productos.map((producto: any) => (
+                  {/* 🚨 AQUÍ ESTÁ EL PARCHE MÁGICO: Agregamos index a la key */}
+                  {productos.map((producto: any, index: number) => (
                     <ProductCard 
-                      key={producto.idProducto} 
+                      key={`prod-cat-${producto.idProducto}-${index}`} 
                       producto={producto} 
                       onPress={() => router.push(`/producto/${producto.idProducto}`)} 
                     />

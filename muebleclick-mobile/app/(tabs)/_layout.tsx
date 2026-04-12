@@ -49,7 +49,6 @@ export default function TabLayout() {
         options={{ title: 'Más', tabBarIcon: ({ color }) => <Ionicons name="menu-outline" size={24} color={color} /> }} 
       />
 
-      {/* Pantallas ocultas de la barra inferior */}
       <Tabs.Screen name="pedidos" options={{ href: null, title: 'Mis Compras' }} />
       <Tabs.Screen name="perfil" options={{ href: null, title: 'Mi Perfil' }} />
     </Tabs>

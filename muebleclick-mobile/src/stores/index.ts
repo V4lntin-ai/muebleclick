@@ -3,9 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, CartItem, Producto } from '../types';
 
-// ============================================================================
-// AUTH STORE
-// ============================================================================
 
 interface AuthState {
   user: User | null;
@@ -40,15 +37,12 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// ============================================================================
-// CART STORE
-// ============================================================================
 
 interface CartState {
   items: CartItem[];
   addItem: (producto: Producto, cantidad?: number) => void;
-  removeItem: (productoId: number) => void;
-  updateQuantity: (productoId: number, cantidad: number) => void;
+  removeItem: (productoId: string | number) => void;
+  updateQuantity: (productoId: string | number, cantidad: number) => void;
   clearCart: () => void;
   getTotal: () => number;
   getTotalItems: () => number;
@@ -107,15 +101,13 @@ export const useCartStore = create<CartState>()(
       },
     }),
     {
-      name: 'cart-storage',
+      // Cambiamos el nombre para purgar la memoria corrupta
+      name: 'cart-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )
 );
 
-// ============================================================================
-// UI STORE
-// ============================================================================
 
 interface UIState {
   selectedCategoria: string | null;
