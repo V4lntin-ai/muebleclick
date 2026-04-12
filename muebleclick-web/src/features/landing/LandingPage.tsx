@@ -1,183 +1,194 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, ShieldCheck, Headphones, CreditCard, Sofa, UtensilsCrossed, BedDouble, Monitor, BookOpen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/shared/components/FadeIn';
-import { ProductCard } from '@/shared/components/ProductCard';
-import * as db from '@/shared/data/mockDb';
-
-const HERO_IMG = 'https://images.unsplash.com/photo-1633505899118-4ca6bd143043?w=1200&h=600&fit=crop';
-
-const CATEGORY_ICONS = {
-  Salas: Sofa,
-  Comedores: UtensilsCrossed,
-  'Recámaras': BedDouble,
-  Oficina: Monitor,
-  Estantes: BookOpen,
-};
-
-const TRUST_ITEMS = [
-  { icon: Truck, label: 'Envíos a todo México', desc: 'Cobertura nacional' },
-  { icon: ShieldCheck, label: 'Garantía de calidad', desc: 'Productos verificados' },
-  { icon: CreditCard, label: 'Pagos seguros', desc: 'Múltiples métodos' },
-  { icon: Headphones, label: 'Soporte dedicado', desc: 'Atención personalizada' },
-];
+import { ArrowRight, Truck, ShieldCheck, CreditCard } from 'lucide-react';
 
 export default function LandingPage() {
-  const featuredProducts = db.productos.slice(0, 8);
-
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="relative hero-gradient noise-overlay">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-28">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <FadeIn>
-              <div>
-                <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-[color:var(--fg)] mb-5">
-                  Encuentra el mueble <span className="text-[color:var(--clr-primary)]">perfecto</span> para tu hogar
-                </h1>
-                <p className="text-base sm:text-lg text-[color:var(--fg)] opacity-60 leading-relaxed mb-8 max-w-lg">
-                  Explora las mejores mueblerías de México en un solo lugar. Calidad, diseño y confianza.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button asChild size="lg" className="rounded-xl bg-[var(--clr-primary)] text-[color:var(--bg)] shadow-[0_14px_30px_rgba(46,94,78,0.22)] hover:shadow-[0_18px_40px_rgba(46,94,78,0.28)] btn-transition text-sm px-6 h-12" data-testid="hero-cta-catalog">
-                    <Link to="/catalogo">
-                      Explorar catálogo
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="lg" className="rounded-xl border-[color:var(--stroke-strong)] text-sm px-6 h-12 hover:bg-[color:rgba(163,177,138,0.15)] btn-transition">
-                    <Link to="/catalogo?cat=Salas">Ver salas</Link>
-                  </Button>
-                </div>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      
+      {/* NAVEGACIÓN */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-8">
+              <span className="text-2xl font-black tracking-tighter text-blue-600">
+                MuebleClick
+              </span>
+              <div className="hidden md:flex gap-6 text-sm font-medium text-slate-600">
+                <a href="#catalogo" className="hover:text-blue-600 transition-colors">Catálogo</a>
+                <a href="#mueblerias" className="hover:text-blue-600 transition-colors">Mueblerías</a>
               </div>
-            </FadeIn>
-            <FadeIn delay={0.2}>
-              <div className="relative">
-                <div className="neo-card overflow-hidden">
-                  <img src={HERO_IMG} alt="Sala moderna" className="w-full h-64 sm:h-80 lg:h-96 object-cover" />
-                </div>
-                {/* Floating badge */}
-                <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-6 glass-card p-3 sm:p-4">
-                  <p className="text-xs font-medium text-[color:var(--fg)] opacity-60">Mueblerías activas</p>
-                  <p className="text-2xl font-bold font-display text-[color:var(--clr-primary)]">{db.mueblerias.length}+</p>
-                </div>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Bento Grid */}
-      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-        <FadeIn>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-[color:var(--fg)] tracking-tight mb-2">Categorías</h2>
-          <p className="text-sm text-[color:var(--fg)] opacity-50 mb-8">Encuentra lo que necesitas para cada espacio</p>
-        </FadeIn>
-        <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {db.categorias.map(cat => {
-            const Icon = CATEGORY_ICONS[cat] || BookOpen;
-            const count = db.productos.filter(p => p.categoria === cat).length;
-            return (
-              <StaggerItem key={cat}>
-                <Link
-                  to={`/catalogo?cat=${encodeURIComponent(cat)}`}
-                  className="neo-card p-5 sm:p-6 text-center card-hover block group"
-                  data-testid={`category-card-${cat}`}
-                >
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center bg-[color:rgba(46,94,78,0.10)] group-hover:bg-[color:rgba(46,94,78,0.18)]" style={{transitionProperty:'background-color',transitionDuration:'200ms'}}>
-                    <Icon className="w-6 h-6 text-[color:var(--clr-primary)]" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-[color:var(--fg)] mb-1">{cat}</h3>
-                  <p className="text-xs text-[color:var(--fg)] opacity-40">{count} productos</p>
-                </Link>
-              </StaggerItem>
-            );
-          })}
-        </StaggerContainer>
-      </section>
-
-      {/* Featured Products */}
-      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
-        <FadeIn>
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-[color:var(--fg)] tracking-tight mb-1">Productos destacados</h2>
-              <p className="text-sm text-[color:var(--fg)] opacity-50">Lo más buscado por nuestros clientes</p>
             </div>
-            <Button asChild variant="ghost" className="rounded-xl text-sm text-[color:var(--clr-primary)] hover:bg-[color:rgba(46,94,78,0.08)]">
-              <Link to="/catalogo">Ver todo <ArrowRight className="w-4 h-4 ml-1" /></Link>
-            </Button>
+            <div className="flex items-center gap-4">
+              <button className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
+                Inicia Sesión
+              </button>
+              <button className="bg-slate-900 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-md transition-transform hover:scale-105 hover:bg-slate-800 active:scale-95">
+                Registrarse
+              </button>
+            </div>
           </div>
-        </FadeIn>
-        <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {featuredProducts.map(p => (
-            <StaggerItem key={p.id_producto}>
-              <ProductCard producto={p} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      </section>
+        </div>
+      </nav>
 
-      {/* Featured Stores */}
-      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-14 sm:pb-20">
-        <FadeIn>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-[color:var(--fg)] tracking-tight mb-2">Mueblerías destacadas</h2>
-          <p className="text-sm text-[color:var(--fg)] opacity-50 mb-8">Conoce a nuestros vendedores verificados</p>
-        </FadeIn>
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {db.mueblerias.map(muebleria => {
-            const propietario = db.getUsuarioById(muebleria.id_propietario);
-            const productCount = db.getProductosByMuebleria(muebleria.id_muebleria).length;
-            const sucursalCount = db.getSucursalesByMuebleria(muebleria.id_muebleria).length;
-            return (
-              <StaggerItem key={muebleria.id_muebleria}>
-                <div className="glass-card p-5 sm:p-6 card-hover">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold font-display text-white shrink-0" style={{ background: 'var(--clr-primary)' }}>
-                      {muebleria.nombre_negocio.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-[color:var(--fg)] truncate">{muebleria.nombre_negocio}</h3>
-                      <p className="text-xs text-[color:var(--fg)] opacity-50 mb-2">{propietario?.nombre}</p>
-                      <div className="flex items-center gap-4 text-xs text-[color:var(--fg)] opacity-60">
-                        <span>{productCount} productos</span>
-                        <span>{sucursalCount} sucursales</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs w-full text-[color:var(--clr-primary)] hover:bg-[color:rgba(46,94,78,0.08)]">
-                      <Link to={`/catalogo?muebleria=${muebleria.id_muebleria}`}>Ver productos</Link>
-                    </Button>
-                  </div>
-                </div>
-              </StaggerItem>
-            );
-          })}
-        </StaggerContainer>
-      </section>
+      {/* HERO SECTION */}
+      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 flex flex-col-reverse lg:flex-row items-center gap-12">
+        <div className="flex-1 space-y-6 text-center lg:text-left">
+          <span className="inline-block py-1 px-3 rounded-full bg-blue-100 text-blue-700 text-sm font-bold tracking-wide">
+            Nuevo en MuebleClick
+          </span>
+          <h1 className="text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight">
+            Muebles únicos para espacios <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">extraordinarios</span>
+          </h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0">
+            Descubre las mejores mueblerías y encuentra piezas que transformarán tu hogar con calidad, diseño y confort.
+          </p>
+          <div className="pt-4">
+            <button className="group bg-blue-600 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg shadow-blue-600/30 transition-all hover:scale-105 hover:bg-blue-700 active:scale-95 flex items-center gap-2 mx-auto lg:mx-0">
+              Explorar Catálogo 
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 relative w-full max-w-lg lg:max-w-none">
+          {/* Imagen de prueba (Placeholder) */}
+          <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <img 
+              src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&q=80&w=1000" 
+              alt="Sala moderna" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </header>
 
-      {/* Trust Badges */}
-      <section className="border-t border-[color:var(--stroke)]">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {TRUST_ITEMS.map(item => (
-              <StaggerItem key={item.label}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[color:rgba(212,163,115,0.15)] shrink-0">
-                    <item.icon className="w-5 h-5 text-[color:var(--clr-accent)]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-[color:var(--fg)]">{item.label}</h4>
-                    <p className="text-xs text-[color:var(--fg)] opacity-50">{item.desc}</p>
-                  </div>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+      {/* FEATURES / BENEFICIOS */}
+      <section className="bg-white py-16 border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <div className="flex flex-col items-center p-6 rounded-2xl transition-colors hover:bg-slate-50">
+            <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-4">
+              <Truck className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Envío a Todo México</h3>
+            <p className="text-slate-600">Entrega directa a tu hogar de forma segura.</p>
+          </div>
+          <div className="flex flex-col items-center p-6 rounded-2xl transition-colors hover:bg-slate-50">
+            <div className="bg-green-100 p-4 rounded-full text-green-600 mb-4">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Compra Segura</h3>
+            <p className="text-slate-600">Transacciones protegidas y garantizadas.</p>
+          </div>
+          <div className="flex flex-col items-center p-6 rounded-2xl transition-colors hover:bg-slate-50">
+            <div className="bg-purple-100 p-4 rounded-full text-purple-600 mb-4">
+              <CreditCard className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Pago Flexible</h3>
+            <p className="text-slate-600">Múltiples opciones de pago para tu comodidad.</p>
+          </div>
         </div>
       </section>
+
+      {/* CATEGORÍAS */}
+      <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4">Explora por Categoría</h2>
+          <p className="text-slate-600">Encuentra exactamente lo que buscas en nuestra amplia selección</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Tarjeta con Animación */}
+          {['Salas', 'Comedores', 'Recámaras', 'Oficina'].map((categoria) => (
+            <div key={categoria} className="group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-100 cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:border-blue-200">
+              <div className="aspect-square bg-slate-100 rounded-xl mb-4 overflow-hidden">
+                {/* Aquí irán tus imágenes reales después */}
+                <div className="w-full h-full bg-slate-200 group-hover:scale-110 transition-transform duration-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{categoria}</h3>
+              <p className="text-sm text-slate-500 mt-1">Explorar muebles →</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PRODUCTOS DESTACADOS */}
+      <section className="bg-slate-900 text-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Productos Destacados</h2>
+              <p className="text-slate-400">Lo más nuevo y popular de nuestras mueblerías</p>
+            </div>
+            <button className="hidden md:flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors font-semibold">
+              Ver todos <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Tarjeta de Producto Animada */}
+            {[
+              { n: 'Sofá Seccional Moderno', p: '$12,500', m: 'Casa Moderna' },
+              { n: 'Sillón Individual Nórdico', p: '$4,200', m: 'Muebles El Roble' },
+              { n: 'Mesa de Comedor Rústica', p: '$8,900', m: 'Muebles El Roble' },
+              { n: 'Cama King Size', p: '$15,000', m: 'Comfort Living' }
+            ].map((prod, i) => (
+              <div key={i} className="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-900/50 cursor-pointer">
+                <div className="aspect-square bg-slate-700" />
+                <div className="p-5">
+                  <p className="text-xs text-slate-400 mb-1 font-medium">{prod.m}</p>
+                  <h3 className="font-bold text-lg mb-3 truncate">{prod.n}</h3>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-400 font-bold">{prod.p}</span>
+                    <button className="bg-slate-700 hover:bg-blue-600 text-white p-2 rounded-full transition-colors">
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN MUEBLERÍAS (CTA Final) */}
+      <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="bg-blue-600 rounded-[3rem] p-12 lg:p-20 text-white shadow-2xl relative overflow-hidden">
+          {/* Elementos decorativos de fondo */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-black opacity-10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          
+          <h2 className="text-4xl lg:text-5xl font-black mb-6 relative z-10">¿Tienes una mueblería?</h2>
+          <p className="text-blue-100 text-lg lg:text-xl max-w-2xl mx-auto mb-10 relative z-10">
+            Únete a MuebleClick y alcanza miles de clientes. Gestiona inventario, pedidos, sucursales y mucho más desde un panel profesional.
+          </p>
+          <button className="relative z-10 bg-white text-blue-900 px-10 py-4 rounded-full text-lg font-bold shadow-xl transition-transform hover:scale-105 active:scale-95 hover:bg-slate-50">
+            Comenzar Ahora →
+          </button>
+        </div>
+      </section>
+
+      {/* FOOTER BÁSICO */}
+      <footer className="bg-white border-t border-slate-200 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div>
+            <span className="text-2xl font-black text-blue-600">MuebleClick</span>
+            <p className="text-slate-500 text-sm mt-4">Conectamos mueblerías con clientes que buscan piezas únicas.</p>
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-900 mb-4">Explorar</h4>
+            <ul className="space-y-2 text-sm text-slate-500">
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Catálogo</a></li>
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Mueblerías</a></li>
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Ofertas</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-900 mb-4">Para Mueblerías</h4>
+            <ul className="space-y-2 text-sm text-slate-500">
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Registrar mi tienda</a></li>
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Panel de vendedor</a></li>
+              <li><a href="#" className="hover:text-blue-600 transition-colors">Planes y Precios</a></li>
+            </ul>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
